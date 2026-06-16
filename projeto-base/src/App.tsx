@@ -4,6 +4,15 @@ import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 
+interface variaveis {
+  count: Number;
+  Count: string;
+  Documentation: string
+}
+interface novasVariaveis extends variaveis {
+  inicio: string;
+  contato: string;
+}
 function App() {
   const [count, setCount] = useState(0)
 
