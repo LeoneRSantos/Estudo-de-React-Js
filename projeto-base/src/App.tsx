@@ -15,6 +15,16 @@ interface novasVariaveis extends variaveis {
 }
 function App() {
   const [count, setCount] = useState(0)
+  const variaveisEmUso: variaveis = {
+    Count: "A contagem está em  ",
+    count: 0,
+    Documentation: "Documentação"
+  }
+  const novasVariaveisEmUso: novasVariaveis = {
+    ...variaveisEmUso,
+    contato: "Contate-nos",
+    inicio: "Início"
+  }
 
   return (
     <>
