@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Search, Plus, MoreHorizontal, Mail, Shield, User, ChevronUp, ChevronDown, Trash2, Edit } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Mail, ChevronUp, ChevronDown, Trash2, Edit } from "lucide-react";
+import { UserFormModal, getInitials, getAvatarColor, ROLE_STYLES, ROLE_ICONS } from "./components/UserFormModal.tsx"
+import type { UserForm, Role, Status } from "./components/UserFormModal.tsx"
 
-{/* MARKER-MAKE-KIT-INVOKED */}
-
-type Role = "Admin" | "Editor" | "Viewer";
-type Status = "Ativo" | "Inativo";
+{/* MARKER-MAKE-KIT-INVOKED */ }
 
 interface UserData {
   id: number;
@@ -13,59 +12,74 @@ interface UserData {
   role: Role;
   status: Status;
   joinedAt: string;
-  avatar: string;
+  avatarColor: string;
 }
 
-const MOCK_USERS: UserData[] = [
-  { id: 1, name: "Ana Souza", email: "ana.souza@email.com", role: "Admin", status: "Ativo", joinedAt: "2024-01-15", avatar: "AS" },
-  { id: 2, name: "Bruno Lima", email: "bruno.lima@email.com", role: "Editor", status: "Ativo", joinedAt: "2024-03-08", avatar: "BL" },
-  { id: 3, name: "Carla Mendes", email: "carla.mendes@email.com", role: "Viewer", status: "Inativo", joinedAt: "2023-11-22", avatar: "CM" },
-  { id: 4, name: "Diego Ferreira", email: "diego.ferreira@email.com", role: "Editor", status: "Ativo", joinedAt: "2024-05-10", avatar: "DF" },
-  { id: 5, name: "Elena Costa", email: "elena.costa@email.com", role: "Viewer", status: "Ativo", joinedAt: "2024-02-28", avatar: "EC" },
-  { id: 6, name: "Felipe Rocha", email: "felipe.rocha@email.com", role: "Admin", status: "Ativo", joinedAt: "2023-09-14", avatar: "FR" },
-  { id: 7, name: "Gabriela Nunes", email: "gabriela.nunes@email.com", role: "Editor", status: "Inativo", joinedAt: "2024-04-03", avatar: "GN" },
-  { id: 8, name: "Henrique Pinto", email: "henrique.pinto@email.com", role: "Viewer", status: "Ativo", joinedAt: "2024-06-01", avatar: "HP" },
+const MOCK_USERS_INITIAL: UserData[] = [
+  { id: 1, name: "Ana Souza", email: "ana.souza@email.com", role: "Admin", status: "Ativo", joinedAt: "2024-01-15", avatarColor: "bg-violet-100 text-violet-700" },
+  { id: 2, name: "Bruno Lima", email: "bruno.lima@email.com", role: "Editor", status: "Ativo", joinedAt: "2024-03-08", avatarColor: "bg-blue-100 text-blue-700" },
+  { id: 3, name: "Carla Mendes", email: "carla.mendes@email.com", role: "Viewer", status: "Inativo", joinedAt: "2023-11-22", avatarColor: "bg-rose-100 text-rose-700" },
+  { id: 4, name: "Diego Ferreira", email: "diego.ferreira@email.com", role: "Editor", status: "Ativo", joinedAt: "2024-05-10", avatarColor: "bg-amber-100 text-amber-700" },
+  { id: 5, name: "Elena Costa", email: "elena.costa@email.com", role: "Viewer", status: "Ativo", joinedAt: "2024-02-28", avatarColor: "bg-emerald-100 text-emerald-700" },
+  { id: 6, name: "Felipe Rocha", email: "felipe.rocha@email.com", role: "Admin", status: "Ativo", joinedAt: "2023-09-14", avatarColor: "bg-indigo-100 text-indigo-700" },
+  { id: 7, name: "Gabriela Nunes", email: "gabriela.nunes@email.com", role: "Editor", status: "Inativo", joinedAt: "2024-04-03", avatarColor: "bg-pink-100 text-pink-700" },
+  { id: 8, name: "Henrique Pinto", email: "henrique.pinto@email.com", role: "Viewer", status: "Ativo", joinedAt: "2024-06-01", avatarColor: "bg-cyan-100 text-cyan-700" },
 ];
-
-const AVATAR_COLORS: Record<string, string> = {
-  AS: "bg-violet-100 text-violet-700",
-  BL: "bg-blue-100 text-blue-700",
-  CM: "bg-rose-100 text-rose-700",
-  DF: "bg-amber-100 text-amber-700",
-  EC: "bg-emerald-100 text-emerald-700",
-  FR: "bg-indigo-100 text-indigo-700",
-  GN: "bg-pink-100 text-pink-700",
-  HP: "bg-cyan-100 text-cyan-700",
-};
-
-const ROLE_STYLES: Record<Role, string> = {
-  Admin: "bg-violet-50 text-violet-700 border border-violet-200",
-  Editor: "bg-blue-50 text-blue-700 border border-blue-200",
-  Viewer: "bg-gray-50 text-gray-600 border border-gray-200",
-};
-
-const ROLE_ICONS: Record<Role, React.ReactNode> = {
-  Admin: <Shield size={11} />,
-  Editor: <Edit size={11} />,
-  Viewer: <User size={11} />,
-};
 
 type SortKey = "name" | "email" | "role" | "joinedAt";
 
+type ModalState =
+  | { type: "none" }
+  | { type: "create" }
+  | { type: "edit"; user: UserData };
+
 export default function App() {
+  const [users, setUsers] = useState<UserData[]>(MOCK_USERS_INITIAL);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "Todos">("Todos");
   const [statusFilter, setStatusFilter] = useState<Status | "Todos">("Todos");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortAsc, setSortAsc] = useState(true);
   const [openMenu, setOpenMenu] = useState<number | null>(null);
+  const [modal, setModal] = useState<ModalState>({ type: "none" });
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc((v) => !v);
     else { setSortKey(key); setSortAsc(true); }
   };
 
-  const filtered = MOCK_USERS
+  const handleCreate = (form: UserForm) => {
+    const newUser: UserData = {
+      id: Date.now(),
+      name: form.name.trim(),
+      email: form.email.trim(),
+      role: form.role,
+      status: form.status,
+      joinedAt: new Date().toISOString().split("T")[0],
+      avatarColor: getAvatarColor(form.name.trim()),
+    };
+    setUsers((prev) => [newUser, ...prev]);
+    setModal({ type: "none" });
+  };
+
+  const handleEdit = (form: UserForm) => {
+    if (modal.type !== "edit") return;
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === modal.user.id
+          ? { ...u, name: form.name.trim(), email: form.email.trim(), role: form.role, status: form.status, avatarColor: getAvatarColor(form.name.trim()) }
+          : u
+      )
+    );
+    setModal({ type: "none" });
+  };
+
+  const handleDelete = (id: number) => {
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    setOpenMenu(null);
+  };
+
+  const filtered = users
     .filter((u) => {
       const q = search.toLowerCase();
       return (
@@ -92,10 +106,13 @@ export default function App() {
           <div>
             <h1 className="text-foreground">Usuários</h1>
             <p className="text-muted-foreground mt-0.5" style={{ fontSize: "0.875rem" }}>
-              {MOCK_USERS.length} usuários cadastrados
+              {users.length} usuários cadastrados
             </p>
           </div>
-          <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer">
+          <button
+            onClick={() => setModal({ type: "create" })}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
+          >
             <Plus size={16} />
             Novo usuário
           </button>
@@ -105,7 +122,6 @@ export default function App() {
       <div className="max-w-6xl mx-auto px-6 py-6 space-y-4">
         {/* Filters */}
         <div className="flex flex-wrap gap-3 items-center">
-          {/* Search */}
           <div className="relative flex-1 min-w-56">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -116,7 +132,6 @@ export default function App() {
               className="w-full pl-9 pr-4 py-2 rounded-lg border border-border bg-input-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 transition"
             />
           </div>
-          {/* Role filter */}
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value as Role | "Todos")}
@@ -127,7 +142,6 @@ export default function App() {
             <option value="Editor">Editor</option>
             <option value="Viewer">Viewer</option>
           </select>
-          {/* Status filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as Status | "Todos")}
@@ -177,8 +191,8 @@ export default function App() {
                       {/* Name + avatar */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0 ${AVATAR_COLORS[user.avatar] ?? "bg-muted text-muted-foreground"}`}>
-                            {user.avatar}
+                          <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0 ${user.avatarColor}`}>
+                            {getInitials(user.name)}
                           </span>
                           <span className="text-foreground">{user.name}</span>
                         </div>
@@ -222,10 +236,16 @@ export default function App() {
                               className="absolute right-0 top-8 z-10 w-36 rounded-lg border border-border bg-card shadow-md py-1"
                               onMouseLeave={() => setOpenMenu(null)}
                             >
-                              <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors cursor-pointer">
+                              <button
+                                onClick={() => { setModal({ type: "edit", user }); setOpenMenu(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors cursor-pointer"
+                              >
                                 <Edit size={14} /> Editar
                               </button>
-                              <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors cursor-pointer">
+                              <button
+                                onClick={() => handleDelete(user.id)}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                              >
                                 <Trash2 size={14} /> Remover
                               </button>
                             </div>
@@ -239,13 +259,29 @@ export default function App() {
             </table>
           </div>
 
-          {/* Footer */}
           <div className="px-5 py-3 border-t border-border bg-muted/20 flex items-center justify-between text-muted-foreground" style={{ fontSize: "0.8125rem" }}>
-            <span>{filtered.length} de {MOCK_USERS.length} usuários</span>
+            <span>{filtered.length} de {users.length} usuários</span>
             <span>Página 1 de 1</span>
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {modal.type === "create" && (
+        <UserFormModal
+          mode="create"
+          onClose={() => setModal({ type: "none" })}
+          onSave={handleCreate}
+        />
+      )}
+      {modal.type === "edit" && (
+        <UserFormModal
+          mode="edit"
+          initialValues={{ name: modal.user.name, email: modal.user.email, role: modal.user.role, status: modal.user.status }}
+          onClose={() => setModal({ type: "none" })}
+          onSave={handleEdit}
+        />
+      )}
     </div>
   );
 }
